@@ -95,6 +95,7 @@ def _get_ctmrg_1x2_structure(
 
 
 def _post_process_CTM_tensors(a: jnp.ndarray, config: VariPEPS_Config) -> jnp.ndarray:
+
     a = a / jnp.linalg.norm(a)
 
     idx = jnp.argmax(jnp.abs(a))
