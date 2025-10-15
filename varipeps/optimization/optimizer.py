@@ -10,8 +10,6 @@ import time
 
 from scipy.optimize import OptimizeResult
 
-from tqdm_loggable.auto import tqdm
-
 import h5py
 
 import numpy as np
@@ -21,6 +19,10 @@ from jax import jit
 import jax.numpy as jnp
 from jax.lax import scan
 from jax.flatten_util import ravel_pytree
+
+import logging
+
+logger = logging.getLogger("varipeps.optimizer")
 
 from varipeps import varipeps_config, varipeps_global_state
 from varipeps.config import Optimizing_Methods, Slurm_Restart_Mode
@@ -603,7 +605,7 @@ def optimize_peps_network(
     slurm_restart_written = False
     slurm_new_job_id = None
 
-    with tqdm(desc="Optimizing PEPS state", initial=count) as pbar:
+    if True:
         while count < varipeps_config.optimizer_max_steps:
             runtime_start = time.perf_counter()
 
@@ -697,9 +699,6 @@ def optimize_peps_network(
                     max_trunc_error_list[random_noise_retries] = []
                     step_runtime[random_noise_retries] = []
 
-                    pbar.reset()
-                    pbar.refresh()
-
                     continue
 
             if working_unitcell[0, 0][0][0].chi != chi_before_ctmrg:
@@ -762,7 +761,7 @@ def optimize_peps_network(
             signal_reset_descent_dir = False
 
             if _scalar_descent_grad(descent_dir, working_gradient) > 0:
-                tqdm.write("Found bad descent dir. Reset to negative gradient!")
+                logger.warning("Found bad descent dir. Reset to negative gradient!")
                 descent_dir = [-elem for elem in working_gradient]
 
             conv = jnp.linalg.norm(ravel_pytree(working_gradient)[0])
@@ -811,7 +810,7 @@ def optimize_peps_network(
                             is Projector_Method.HALF
                         )
                     ):
-                        tqdm.write(
+                        logger.warning(
                             "Convergence is not sufficient. Retry with some random noise on best result."
                         )
 
@@ -1017,21 +1016,15 @@ def optimize_peps_network(
 
             count += 1
 
-            pbar.update()
-            pbar.set_postfix(
-                {
-                    "Energy": f"{working_value:0.10f}",
-                    "Retries": random_noise_retries,
-                    "Convergence": f"{conv:0.8f}",
-                    "Line search step": (
-                        f"{linesearch_step:0.8f}"
-                        if linesearch_step is not None
-                        else "0"
-                    ),
-                    "Max. trunc. err.": f"{max_trunc_error:0.8g}",
-                }
+            logger.info(
+                "📉 Step %d | Energy: %0.10f | Retries: %d | Conv: %0.8f | Line search step: %s | Max. trunc. err.: %0.8g",
+                count,
+                working_value,
+                random_noise_retries,
+                conv,
+                f"{float(linesearch_step):0.8f}" if linesearch_step is not None else "None",
+                max_trunc_error,
             )
-            pbar.refresh()
 
             if count % varipeps_config.optimizer_autosave_step_count == 0:
                 _autosave_wrapper(
@@ -1187,7 +1180,7 @@ def optimize_peps_network(
                             slurm_data["WorkDir"],
                         )
                         if slurm_new_job_id is None:
-                            tqdm.write(
+                            logger.error(
                                 "Failed to start new Slurm job or parse its job id."
                             )
                         break
