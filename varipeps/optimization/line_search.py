@@ -443,7 +443,7 @@ def line_search(
                     additional_input,
                     enforce_elementwise_convergence=enforce_elementwise_convergence,
                 )
-                tqdm.write(f"Line search step {count+1}, E={new_value}, alpha={alpha}")
+                tqdm.write(f"Line search step {count+1}, E={new_value}, alpha={alpha}", end="")
 
                 if new_unitcell[0, 0][0][0].chi > unitcell[0, 0][0][0].chi:
                     tmp_value = current_value

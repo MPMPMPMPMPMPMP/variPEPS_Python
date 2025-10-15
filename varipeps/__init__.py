@@ -23,7 +23,7 @@ jax_config.update("jax_enable_x64", True)
 from tqdm_loggable.tqdm_logging import tqdm_logging
 import datetime
 
-tqdm_logging.set_log_rate(datetime.timedelta(seconds=60))
+tqdm_logging.set_log_rate(datetime.timedelta(seconds=0.1))
 
 del datetime
 del tqdm_logging
