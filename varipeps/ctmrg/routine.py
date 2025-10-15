@@ -720,7 +720,7 @@ def calc_ctmrg_env(
         else:
             converged = False
             end_count = tmp_count
-
+        debug_print("CTMRG: Converged: {}, Steps: {}, Smallest SVD Norm: {}", converged, end_count, norm_smallest_S,)
         if converged and (
             working_unitcell[0, 0][0][0].chi > best_chi or best_result is None
         ):
@@ -839,7 +839,7 @@ def calc_ctmrg_env(
         and end_count == varipeps_config.ctmrg_max_steps
         and not converged
     ):
-        debug_print("CTMRG: Failed to converge within the maximum number of steps.")
+        # debug_print("CTMRG: Failed to converge within the maximum number of steps.")
         raise CTMRGNotConvergedError
 
     if _return_truncation_eps:
@@ -1020,7 +1020,7 @@ def calc_ctmrg_env_rev(
     )
 
     varipeps_global_state.ctmrg_effective_truncation_eps = None
-
+    debug_print("Custom VJP: Converged: {}, Steps: {}", converged, end_count)
     if end_count == varipeps_config.ad_custom_max_steps and not converged:
         raise CTMRGGradientNotConvergedError
 
