@@ -839,6 +839,7 @@ def calc_ctmrg_env(
         and end_count == varipeps_config.ctmrg_max_steps
         and not converged
     ):
+        debug_print("CTMRG: Failed to converge within the maximum number of steps.")
         raise CTMRGNotConvergedError
 
     if _return_truncation_eps:

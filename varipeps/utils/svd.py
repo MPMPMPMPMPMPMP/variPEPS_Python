@@ -358,7 +358,6 @@ def gauge_fixed_svd(
             gauge_unitary = Vh.T.conj()
         else:
             raise ValueError("Invalid value for parameter 'only_u_or_vh'.")
-
     # Fix the gauge of the SVD
     abs_gauge_unitary = jnp.abs(gauge_unitary)
     max_per_vector = jnp.max(abs_gauge_unitary, axis=0)
@@ -380,7 +379,7 @@ def gauge_fixed_svd(
     phases, _ = scan(
         phase_f,
         (jnp.zeros(gauge_unitary.shape[1], dtype=bool), gauge_unitary[0, :]),
-        (gauge_unitary, normalized_gauge_unitary),
+        (gauge_unitary, normalized_gauge_unitary), unroll=50,
     )
     phases = phases[1]
     phases /= jnp.abs(phases)

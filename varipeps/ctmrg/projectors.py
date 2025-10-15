@@ -118,7 +118,7 @@ def _truncated_SVD(
     Vh = Vh[:chi, :]
 
     if len(S) > chi:
-
+        jax.debug.print("S before fixing multiplets: {}", S)
         def fix_multiplets(carry, x):
             S_elem, gap = x
             (already_found,) = carry
@@ -1987,7 +1987,7 @@ def calc_top_projectors_split_transfer(
       peps_tensor_objs (:term:`sequence` of :term:`sequence` of :obj:`~varipeps.peps.PEPS_Tensor`):
         Nested list of the PEPS tensor objects. Same format as for `peps_tensors`.
     Returns:
-      :obj:`tuple`\ (:obj:`jax.numpy.ndarray`, :obj:`jax.numpy.ndarray`):
+      :obj:`tuple` (:obj:`jax.numpy.ndarray`, :obj:`jax.numpy.ndarray`):
         The left top and bottom projectors for both layer.
     """
     if config.checkpointing_projectors:
