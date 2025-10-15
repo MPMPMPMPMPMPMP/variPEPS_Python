@@ -330,7 +330,7 @@ def line_search(
       reinitialize_env_as_identities (:obj:`bool`):
         Flag if the env tensors should be reinitialized with identities.
     Returns:
-      :obj:`tuple`\ (:obj:`list`\ (:obj:`jax.numpy.ndarray`), :obj:`~varipeps.peps.PEPS_Unit_Cell`, :obj:`float`, :obj:`float`):
+      :obj:`tuple` (:obj:`list` (:obj:`jax.numpy.ndarray`), :obj:`~varipeps.peps.PEPS_Unit_Cell`, :obj:`float`, :obj:`float`):
         Tuple with the optimized tensors, the new unitcell, the reduced
         expectation value and the step size found in the line search.
     Raises:
@@ -443,6 +443,7 @@ def line_search(
                     additional_input,
                     enforce_elementwise_convergence=enforce_elementwise_convergence,
                 )
+                tqdm.write(f"Line search step {count+1}, E={new_value}, alpha={alpha}")
 
                 if new_unitcell[0, 0][0][0].chi > unitcell[0, 0][0][0].chi:
                     tmp_value = current_value
@@ -534,6 +535,7 @@ def line_search(
                         additional_input,
                         calc_preconverged=True,
                     )
+                tqdm.write(f"Line search step {count+1}, E={new_value:<.6f}, alpha={alpha:.4f}")
                 new_gradient = [elem.conj() for elem in new_gradient_seq]
 
                 if new_unitcell[0, 0][0][0].chi > unitcell[0, 0][0][0].chi:

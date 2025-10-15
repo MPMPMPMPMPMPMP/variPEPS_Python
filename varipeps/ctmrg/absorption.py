@@ -5,6 +5,7 @@ from operator import itemgetter
 import jax.numpy as jnp
 from jax import jit
 from jax.lax import scan, cond
+import jax
 
 from varipeps.peps import PEPS_Tensor, PEPS_Unit_Cell
 from varipeps.contractions import apply_contraction, apply_contraction_jitted

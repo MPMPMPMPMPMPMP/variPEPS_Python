@@ -1988,7 +1988,7 @@ def calc_top_projectors_split_transfer(
       peps_tensor_objs (:term:`sequence` of :term:`sequence` of :obj:`~varipeps.peps.PEPS_Tensor`):
         Nested list of the PEPS tensor objects. Same format as for `peps_tensors`.
     Returns:
-      :obj:`tuple`\ (:obj:`jax.numpy.ndarray`, :obj:`jax.numpy.ndarray`):
+      :obj:`tuple` (:obj:`jax.numpy.ndarray`, :obj:`jax.numpy.ndarray`):
         The left top and bottom projectors for both layer.
     """
     if config.checkpointing_projectors:
