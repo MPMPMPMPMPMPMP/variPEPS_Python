@@ -8,6 +8,12 @@ from varipeps.peps import PEPS_Unit_Cell
 
 
 def calculate_correlation_length(unitcell: PEPS_Unit_Cell):
+    """
+    Calculate correlation length along two directions (left and top) of the PEPS unit cell.
+    Warning: This function does not recalculate the environment!
+    Args:
+        unitcell: PEPS_Unit_Cell instance representing the PEPS.
+    """
     initial_vector_left = apply_contraction_jitted(
         "corrlength_vector_left",
         (unitcell[0, 0][0][0].tensor,),
