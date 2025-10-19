@@ -116,6 +116,44 @@ class Triangular_j1_jchi_model(Expectation_Model):
                 self.spiral_unitary_operator
             )
 
+    @staticmethod
+    @partial(jax.jit, static_argnames=("only_unique", "is_real"))
+    def _accumulate_over_unitcell(
+        peps_tensors,
+        unitcell,
+        working_up_gates,
+        working_down_gates,
+        *,
+        only_unique: bool,
+        is_real: bool,
+    ):
+        # initialize accumulator as a tuple to keep it purely functional
+        zero = jnp.array(0.0) if is_real else jnp.array(0.0 + 0.0j)
+        result = tuple(zero for _ in range(len(working_up_gates)))
+
+        for x, iter_rows in unitcell.iter_all_rows(only_unique=only_unique):
+            for y, view in iter_rows:
+                # Get all 4 tensors in the 2x2 view
+                tensors_i = view.get_indices((slice(0, 2, None), slice(0, 2, None)))
+                tensors = [peps_tensors[i] for j in tensors_i for i in j]
+                tensor_objs = [t for tl in view[:2, :2] for t in tl]
+
+                # remat/checkpoint for memory; gates treated static via static_argnums
+                step_result_down = jax.checkpoint(calc_three_sites_triangle_without_bottom_left_multiple_gates)(
+                    tensors, tensor_objs, working_down_gates
+                )
+                step_result_up = jax.checkpoint(calc_three_sites_triangle_without_top_right_multiple_gates)(
+                    tensors, tensor_objs, working_up_gates
+                )
+
+                # functional accumulation; ensure real dtype if requested
+                incr = tuple(
+                    ((sd.real if is_real else sd) + (su.real if is_real else su))
+                    for sd, su in zip(step_result_down, step_result_up, strict=True)
+                )
+                result = tuple(r + a for r, a in zip(result, incr))
+        return result
+
     def __call__(
         self,
         peps_tensors: Sequence[jnp.ndarray],
@@ -126,11 +164,6 @@ class Triangular_j1_jchi_model(Expectation_Model):
         only_unique: bool = True,
         return_single_gate_results: bool = False,
     ) -> Union[jnp.ndarray, List[jnp.ndarray]]:
-        result = [
-            jnp.array(0, dtype=self._result_type)
-            for _ in range(len(self.up_gates))
-        ]
-
         if self.is_spiral_peps:
             if spiral_vectors is None:
                 raise ValueError(
@@ -174,38 +207,15 @@ class Triangular_j1_jchi_model(Expectation_Model):
             working_up_gates = self.up_gates
             working_down_gates = self.down_gates
 
-        for x, iter_rows in unitcell.iter_all_rows(only_unique=only_unique):
-            for y, view in iter_rows:
-                # Get all 4 tensors in the 2x2 view
-                tensors_i = view.get_indices(
-                    (slice(0, 2, None), slice(0, 2, None))
-                )
-                tensors = [
-                    peps_tensors[i] for j in tensors_i for i in j
-                ]
-                tensor_objs = [t for tl in view[:2, :2] for t in tl]
-
-                # remat/checkpoint for memory; gates treated static via static_argnums
-                step_result_down = (
-                    calc_three_sites_triangle_without_bottom_left_multiple_gates(
-                        tensors,
-                        tensor_objs,
-                        working_down_gates,
-                    )
-                )
-
-                step_result_up = (
-                    calc_three_sites_triangle_without_top_right_multiple_gates(
-                        tensors,
-                        tensor_objs,
-                        working_up_gates,
-                    )
-                )
-
-                for sr_i, (sr_down, sr_up) in enumerate(
-                    zip(step_result_down, step_result_up, strict=True)
-                ):
-                    result[sr_i] += sr_down + sr_up
+        # Use jitted static method to perform the accumulation over the unitcell
+        result = self._accumulate_over_unitcell(
+            peps_tensors,
+            unitcell,
+            working_up_gates,
+            working_down_gates,
+            only_unique=only_unique,
+            is_real=(self._result_type == jnp.float64),
+        )
 
         if normalize_by_size:
             size = unitcell.get_len_unique_tensors() if only_unique else (unitcell.get_size()[0] * unitcell.get_size()[1])
