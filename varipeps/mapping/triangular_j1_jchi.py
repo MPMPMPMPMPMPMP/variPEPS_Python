@@ -9,6 +9,8 @@ from jax import jit
 import jax.util
 import h5py
 import jax
+import logging
+import time
 
 from varipeps import varipeps_config
 import varipeps.config
@@ -42,6 +44,8 @@ from typing import (
 )
 
 
+
+logger = logging.getLogger("varipeps.expectation")
 
 @dataclass
 class Triangular_j1_jchi_model(Expectation_Model):
@@ -139,12 +143,12 @@ class Triangular_j1_jchi_model(Expectation_Model):
                 tensor_objs = [t for tl in view[:2, :2] for t in tl]
 
                 # remat/checkpoint for memory; gates treated static via static_argnums
-                step_result_down = jax.checkpoint(calc_three_sites_triangle_without_bottom_left_multiple_gates)(
-                    tensors, tensor_objs, working_down_gates
-                )
-                step_result_up = jax.checkpoint(calc_three_sites_triangle_without_top_right_multiple_gates)(
-                    tensors, tensor_objs, working_up_gates
-                )
+                step_result_down = jax.checkpoint(
+                    calc_three_sites_triangle_without_bottom_left_multiple_gates
+                )(tensors, tensor_objs, working_down_gates)
+                step_result_up = jax.checkpoint(
+                    calc_three_sites_triangle_without_top_right_multiple_gates
+                )(tensors, tensor_objs, working_up_gates)
 
                 # functional accumulation; ensure real dtype if requested
                 incr = tuple(
@@ -164,6 +168,10 @@ class Triangular_j1_jchi_model(Expectation_Model):
         only_unique: bool = True,
         return_single_gate_results: bool = False,
     ) -> Union[jnp.ndarray, List[jnp.ndarray]]:
+        if logger.isEnabledFor(logging.DEBUG):
+            logger.debug("Starting Triangular_j1_jchi_model expectation value computation.")
+        if logger.isEnabledFor(logging.INFO):
+            t0 = time.perf_counter()
         if self.is_spiral_peps:
             if spiral_vectors is None:
                 raise ValueError(
@@ -171,7 +179,7 @@ class Triangular_j1_jchi_model(Expectation_Model):
                 )
             # if not isinstance(spiral_vectors, collections.abc.Sequence):
             #     spiral_vectors = (spiral_vectors,) * 3
-
+            
 
             #[top-left, top-right, bottom-right]
             working_down_gates = tuple(
@@ -221,7 +229,8 @@ class Triangular_j1_jchi_model(Expectation_Model):
             size = unitcell.get_len_unique_tensors() if only_unique else (unitcell.get_size()[0] * unitcell.get_size()[1])
             size = size * self.normalization_factor
             result = [r / size for r in result]
-
+        if logger.isEnabledFor(logging.INFO):
+            logger.info(f"🧮 Triangular_j1_jchi_model expectation value computed in {time.perf_counter() - t0:.3f} seconds.")
         if len(result) == 1:
             return result[0]
         else:
