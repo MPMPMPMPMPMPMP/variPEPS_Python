@@ -8,6 +8,7 @@ import numpy as np
 from jax import jit
 import jax.util
 import h5py
+import jax
 
 from varipeps import varipeps_config
 import varipeps.config
@@ -184,6 +185,7 @@ class Triangular_j1_jchi_model(Expectation_Model):
                 ]
                 tensor_objs = [t for tl in view[:2, :2] for t in tl]
 
+                # remat/checkpoint for memory; gates treated static via static_argnums
                 step_result_down = (
                     calc_three_sites_triangle_without_bottom_left_multiple_gates(
                         tensors,
@@ -206,10 +208,7 @@ class Triangular_j1_jchi_model(Expectation_Model):
                     result[sr_i] += sr_down + sr_up
 
         if normalize_by_size:
-            if only_unique:
-                size = unitcell.get_len_unique_tensors()
-            else:
-                size = unitcell.get_size()[0] * unitcell.get_size()[1]
+            size = unitcell.get_len_unique_tensors() if only_unique else (unitcell.get_size()[0] * unitcell.get_size()[1])
             size = size * self.normalization_factor
             result = [r / size for r in result]
 
@@ -276,24 +275,17 @@ class Triangular_j1_jchi_model(Expectation_Model):
         grp.attrs["class"] = f"{cls.__module__}.{cls.__qualname__}"
 
         grp_gates = grp.create_group("gates", track_order=True)
-        grp_gates.attrs["len_top_left"] = len(self.triangle_without_top_left_gates)
-        for i, g in enumerate(self.triangle_without_top_left_gates):
+        # Save up and down gates consistently with attributes
+        grp_gates.attrs["len_up"] = len(self.up_gates)
+        for i, g in enumerate(self.up_gates):
             grp_gates.create_dataset(
-                f"triangle_without_top_left_gate_{i:d}",
-                data=g,
-                compression="gzip",
-                compression_opts=6,
+                f"up_gate_{i:d}", data=g, compression="gzip", compression_opts=6
             )
 
-        grp_gates.attrs["len_bottom_right"] = len(
-            self.triangle_without_bottom_right_gates
-        )
-        for i, g in enumerate(self.triangle_without_bottom_right_gates):
+        grp_gates.attrs["len_down"] = len(self.down_gates)
+        for i, g in enumerate(self.down_gates):
             grp_gates.create_dataset(
-                f"triangle_without_bottom_right_gate_{i:d}",
-                data=g,
-                compression="gzip",
-                compression_opts=6,
+                f"down_gate_{i:d}", data=g, compression="gzip", compression_opts=6
             )
 
         grp.attrs["normalization_factor"] = self.normalization_factor
@@ -316,25 +308,37 @@ class Triangular_j1_jchi_model(Expectation_Model):
                 "The HDF5 group suggests that this is not the right class to load data from it."
             )
 
-        triangle_without_top_left_gates = tuple(
-            jnp.asarray(grp["gates"][f"triangle_without_top_left_gate_{i:d}"])
-            for i in range(grp["gates"].attrs["len_top_left"])
-        )
-        triangle_without_bottom_right_gates = tuple(
-            jnp.asarray(grp["gates"][f"triangle_without_bottom_right_gate_{i:d}"])
-            for i in range(grp["gates"].attrs["len_bottom_right"])
-        )
+        # Prefer new names; fall back to old ones if present
+        if "len_up" in grp["gates"].attrs:
+            up_gates = tuple(
+                jnp.asarray(grp["gates"][f"up_gate_{i:d}"])
+                for i in range(grp["gates"].attrs["len_up"])
+            )
+            down_gates = tuple(
+                jnp.asarray(grp["gates"][f"down_gate_{i:d}"])
+                for i in range(grp["gates"].attrs["len_down"])
+            )
+        else:
+            # Backward compatibility with previous naming (if any)
+            up_gates = tuple(
+                jnp.asarray(grp["gates"][f"triangle_without_top_left_gate_{i:d}"])
+                for i in range(grp["gates"].attrs.get("len_top_left", 0))
+            )
+            down_gates = tuple(
+                jnp.asarray(grp["gates"][f"triangle_without_bottom_right_gate_{i:d}"])
+                for i in range(grp["gates"].attrs.get("len_bottom_right", 0))
+            )
 
         is_spiral_peps = grp.attrs["is_spiral_peps"]
-
-        if is_spiral_peps:
-            spiral_unitary_operator = jnp.asarray(grp["spiral_unitary_operator"])
-        else:
-            spiral_unitary_operator = None
+        spiral_unitary_operator = (
+            jnp.asarray(grp["spiral_unitary_operator"])
+            if is_spiral_peps
+            else None
+        )
 
         return cls(
-            triangle_without_top_left_gates=triangle_without_top_left_gates,
-            triangle_without_bottom_right_gates=triangle_without_bottom_right_gates,
+            up_gates=up_gates,
+            down_gates=down_gates,
             normalization_factor=grp.attrs["normalization_factor"],
             is_spiral_peps=is_spiral_peps,
             spiral_unitary_operator=spiral_unitary_operator,
