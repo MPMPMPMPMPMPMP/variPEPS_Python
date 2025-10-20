@@ -337,16 +337,6 @@ class Triangular_j1_jchi_model(Expectation_Model):
                 jnp.asarray(grp["gates"][f"down_gate_{i:d}"])
                 for i in range(grp["gates"].attrs["len_down"])
             )
-        else:
-            # Backward compatibility with previous naming (if any)
-            up_gates = tuple(
-                jnp.asarray(grp["gates"][f"triangle_without_top_left_gate_{i:d}"])
-                for i in range(grp["gates"].attrs.get("len_top_left", 0))
-            )
-            down_gates = tuple(
-                jnp.asarray(grp["gates"][f"triangle_without_bottom_right_gate_{i:d}"])
-                for i in range(grp["gates"].attrs.get("len_bottom_right", 0))
-            )
 
         is_spiral_peps = grp.attrs["is_spiral_peps"]
         spiral_unitary_operator = (
