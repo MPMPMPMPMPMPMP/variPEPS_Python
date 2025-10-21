@@ -203,13 +203,14 @@ def autosave_function(
     counter: Optional[Union[int, str]] = None,
     auxiliary_data: Optional[Dict[str, Any]] = None,
 ) -> None:
+    t0 = time.perf_counter()
     if counter is not None:
-        logger.debug(f"💾 Autosaving to {str(filename)}.{counter}")
         unitcell.save_to_file(
             f"{str(filename)}.{counter}", auxiliary_data=auxiliary_data
         )
+        logger.debug(f"💾 Autosaving to {str(filename)}.{counter}, took {time.perf_counter() - t0:.2f} sec")
     else:
-        logger.debug(f"💾 Autosaving to {str(filename)}")
+        logger.debug(f"💾 Autosaving to {str(filename)}, took {time.perf_counter() - t0:.2f} sec")
         unitcell.save_to_file(filename, auxiliary_data=auxiliary_data)
 
 
@@ -234,6 +235,7 @@ def autosave_function_restartable(
     signal_reset_descent_dir,
 ) -> None:
     state_filename = os.environ.get("VARIPEPS_STATE_FILE")
+    t0 = time.perf_counter()
     if state_filename is None:
         state_filename = f"{str(filename)}.restartable"
     with h5py.File(state_filename, "w", libver=("earliest", "v110")) as f:
@@ -364,6 +366,7 @@ def autosave_function_restartable(
                             compression="gzip",
                             compression_opts=6,
                         )
+    logger.debug(f"💾 Restartable autosaving to {str(state_filename)}, took {time.perf_counter() - t0:.2f} sec")
 
 
 def _autosave_wrapper(
@@ -496,6 +499,7 @@ def optimize_peps_network(
         final expectation value. See the type definition for other possible
         fields.
     """
+    logger.info("🛠️ Starting optimization ... ")
     rng = PEPS_Random_Number_Generator.get_generator(backend="jax")
 
     def random_noise(a):
