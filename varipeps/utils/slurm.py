@@ -127,6 +127,47 @@ class SlurmUtils:
         return job_id
 
     @staticmethod
+    def resubmit_self():
+        """
+        Fetch the current job's batch script and resubmit it.
+        Returns the new job id, or None on failure.
+        """
+        job_id = os.environ.get("SLURM_JOB_ID")
+        if not job_id:
+            return None
+
+        try:
+            fetched = subprocess.run(
+                ["scontrol", "write", "batch_script", str(job_id), "-"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError:
+            return None
+
+        script_content = fetched.stdout
+        if not script_content:
+            return None
+
+        try:
+            submitted = subprocess.run(
+                ["sbatch"],
+                input=script_content,
+                text=True,
+                capture_output=True,
+                check=True,
+            )
+        except subprocess.CalledProcessError:
+            return None
+
+        out = (submitted.stdout or "").strip()
+        try:
+            return int(out.split()[-1])
+        except Exception:
+            return None
+
+    @staticmethod
     def generate_restart_scripts(
         slurm_script_path,
         python_script_path,
