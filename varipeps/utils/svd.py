@@ -358,31 +358,19 @@ def gauge_fixed_svd(
             gauge_unitary = Vh.T.conj()
         else:
             raise ValueError("Invalid value for parameter 'only_u_or_vh'.")
+
     # Fix the gauge of the SVD
     abs_gauge_unitary = jnp.abs(gauge_unitary)
     max_per_vector = jnp.max(abs_gauge_unitary, axis=0)
     normalized_gauge_unitary = abs_gauge_unitary / max_per_vector[jnp.newaxis, :]
 
-    def phase_f(carry, x):
-        x_row, normalized_x_row = x
-
-        already_found, last_step_result = carry
-
-        cond = normalized_x_row >= varipeps_config.svd_sign_fix_eps
-
-        result = jnp.where(
-            already_found, last_step_result, jnp.where(cond, x_row, last_step_result)
-        )
-
-        return (jnp.logical_or(already_found, cond), result), None
-
-    phases, _ = scan(
-        phase_f,
-        (jnp.zeros(gauge_unitary.shape[1], dtype=bool), gauge_unitary[0, :]),
-        (gauge_unitary, normalized_gauge_unitary), unroll=50,
-    )
-    phases = phases[1]
-    phases /= jnp.abs(phases)
+    # Vectorized first-hit selection (no scan)
+    cond = normalized_gauge_unitary >= varipeps_config.svd_sign_fix_eps
+    first_idx = jnp.argmax(cond, axis=0)                    # first True along rows
+    any_true = jnp.any(cond, axis=0)                        # columns with any True
+    idx = jnp.where(any_true, first_idx, 0)                 # fallback to row 0
+    phases = jnp.take_along_axis(gauge_unitary, idx[jnp.newaxis, :], axis=0)[0]
+    phases = phases / jnp.where(jnp.abs(phases) == 0, 1, jnp.abs(phases))
 
     if only_u_or_vh is None or only_u_or_vh == "U":
         U = U * phases.conj()[jnp.newaxis, :]
