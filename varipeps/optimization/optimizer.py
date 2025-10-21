@@ -1256,6 +1256,15 @@ def optimize_peps_network(
                         )
                     break
 
+                if varipeps_config.slurm_restart_mode is Slurm_Restart_Mode.RESUBMIT_SELF:
+                    slurm_new_job_id = SlurmUtils.resubmit_self()
+                    logger.info(
+                        "Resubmitted same Slurm job with ID %d.",
+                        slurm_new_job_id,
+                    )
+                    slurm_restart_written = True
+                    break
+
     if working_value < best_value:
         best_value = working_value
         best_tensors = working_tensors

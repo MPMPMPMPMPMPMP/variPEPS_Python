@@ -53,6 +53,7 @@ class Slurm_Restart_Mode(IntEnum):
         auto()
     )  #: Write slurm restart script but do not submit new slurm job
     AUTOMATIC_RESTART = auto()  #: Write restart script and start new slurm job with it
+    RESUBMIT_SELF = auto()  #: Resubmit the same job script again so the script should look for an autosave
 
 
 @unique
