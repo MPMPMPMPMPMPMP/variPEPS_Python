@@ -136,7 +136,7 @@ class Triangular_j1_jchi_model(Expectation_Model):
         down_gates= H_J1 + jchi * SSS_chi
         down_gates = (down_gates,) if isinstance(down_gates, jnp.ndarray) else ValueError("down_gates must be a jnp.ndarray.")
 
-        up_gates = H_J1 + jchi * SSS_chi
+        up_gates = H_J1 - jchi * SSS_chi
         up_gates = (up_gates,) if isinstance(up_gates, jnp.ndarray) else ValueError("up_gates must be a jnp.ndarray.")
 
         # print(list(jnp.allclose(g, g.T.conj()) for g in (trgl_down, trgl_up)))
@@ -245,7 +245,7 @@ class Triangular_j1_jchi_model(Expectation_Model):
                 # print(tensor_objs)
                 # print(tensors)
 
-                # remat/checkpoint for memory; gates treated static via static_argnums
+                #The gate is applied in the order [top-left, top-right, bottom-right].
                 step_result_down = (
                     jax.checkpoint(calc_three_sites_triangle_without_bottom_left_multiple_gates)(
                         tensors,
@@ -253,7 +253,7 @@ class Triangular_j1_jchi_model(Expectation_Model):
                         working_down_gates,
                     )
                 )
-
+                #The gate is applied in the order [top-left, bottom-left, bottom-right].
                 step_result_up = (
                     jax.checkpoint(calc_three_sites_triangle_without_top_right_multiple_gates)(
                         tensors,
