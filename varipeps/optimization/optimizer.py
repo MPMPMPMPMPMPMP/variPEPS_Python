@@ -1065,7 +1065,7 @@ def optimize_peps_network(
             conv = jnp.inf
             linesearch_step = None
 
-        if (conv < varipeps_config.optimizer_convergence_eps) or (((step_energies[-2] - working_value) < varipeps_config.optimizer_convergence_energy_eps) if len(step_energies[random_noise_retries]) > 1 else False):
+        if (conv < varipeps_config.optimizer_convergence_eps) or (((step_energies[random_noise_retries][-2] - working_value) < varipeps_config.optimizer_convergence_energy_eps) if len(step_energies[random_noise_retries]) > 1 else False):
             working_value, (
                 working_unitcell,
                 max_trunc_error,
