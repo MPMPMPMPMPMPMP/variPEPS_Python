@@ -862,7 +862,7 @@ def optimize_peps_network(
                 additional_input,
                 conv > varipeps_config.optimizer_reuse_env_eps,
             )
-        except NoSuitableStepSizeError:
+        except NoSuitableStepSizeError as e:
             runtime = time.perf_counter() - runtime_start
             step_runtime[random_noise_retries].append(runtime)
 
@@ -884,9 +884,9 @@ def optimize_peps_network(
                     )
                 ):
 
-                    if count <= varipeps_config.optimizer_min_steps_before_random_noise:
+                    if (count <= varipeps_config.optimizer_min_steps_before_random_noise) and (1e-2 < conv):
                         logger.warning(
-                            f"⚠️ Only {count:d} steps done so far which is less than the minimum required {varipeps_config.optimizer_min_steps_before_random_noise:d} steps. Retry with a different state, this one wastes time."
+                            f"️⛔ Only {count:d} steps done, which is less than the minimum required {varipeps_config.optimizer_min_steps_before_random_noise:d} steps. This state doesn't seem to converge.️ ⛔"
                         )
                         return OptimizeResult(
                         success=False,
@@ -1065,7 +1065,7 @@ def optimize_peps_network(
             conv = jnp.inf
             linesearch_step = None
 
-        if (conv < varipeps_config.optimizer_convergence_eps) or (((step_energies[random_noise_retries][-2] - working_value) < varipeps_config.optimizer_convergence_energy_eps) if len(step_energies[random_noise_retries]) > 1 else False):
+        if (conv < varipeps_config.optimizer_convergence_eps) or ((abs(step_energies[random_noise_retries][-2] - working_value) < varipeps_config.optimizer_convergence_energy_eps) if len(step_energies[random_noise_retries]) > 1 else False):
             working_value, (
                 working_unitcell,
                 max_trunc_error,
