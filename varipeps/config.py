@@ -299,6 +299,7 @@ class VariPEPS_Config:
     optimizer_use_preconditioning: bool = True
     optimizer_precond_gmres_krylov_subspace_size: int = 30
     optimizer_precond_gmres_maxiter: int = 3
+    optimizer_min_steps_before_random_noise: int = 10
 
     # Line search
     line_search_method: Line_Search_Methods = Line_Search_Methods.HAGERZHANG

@@ -710,22 +710,22 @@ def optimize_peps_network(
         except (CTMRGNotConvergedError, CTMRGGradientNotConvergedError) as e:
             varipeps_global_state.ctmrg_projector_method = None
 
-            if random_noise_retries == 0:
-                return OptimizeResult(
-                    success=False,
-                    message=str(type(e)),
-                    x=working_tensors,
-                    fun=working_value,
-                    unitcell=working_unitcell,
-                    nit=count,
-                    max_trunc_error_list=max_trunc_error_list,
-                    step_energies=step_energies,
-                    step_chi=step_chi,
-                    step_conv=step_conv,
-                    step_runtime=step_runtime,
-                    best_run=0,
-                )
-            elif (
+            # if random_noise_retries == varipeps_config.optimizer_random_noise_max_retries:
+            #     return OptimizeResult(
+            #         success=False,
+            #         message=str(type(e)),
+            #         x=working_tensors,
+            #         fun=working_value,
+            #         unitcell=working_unitcell,
+            #         nit=count,
+            #         max_trunc_error_list=max_trunc_error_list,
+            #         step_energies=step_energies,
+            #         step_chi=step_chi,
+            #         step_conv=step_conv,
+            #         step_runtime=step_runtime,
+            #         best_run=0,
+            #     )
+            if (
                 random_noise_retries
                 >= varipeps_config.optimizer_random_noise_max_retries
             ):
@@ -883,10 +883,27 @@ def optimize_peps_network(
                         is Projector_Method.HALF
                     )
                 ):
-                    logger.warning(
-                        "⚠️ Convergence is not sufficient. Retry with some random noise on best result. 🔀"
+
+                    if count <= varipeps_config.optimizer_min_steps_before_random_noise:
+                        logger.warning(
+                            f"⚠️ Only {count:d} steps done so far which is less than the minimum required {varipeps_config.optimizer_min_steps_before_random_noise:d} steps. Retry with a different state, this one wastes time."
+                        )
+                        return OptimizeResult(
+                        success=False,
+                        message=str(type(e)),
+                        x=working_tensors,
+                        fun=working_value,
+                        unitcell=working_unitcell,
+                        nit=count,
+                        max_trunc_error_list=max_trunc_error_list,
+                        step_energies=step_energies,
+                        step_chi=step_chi,
+                        step_conv=step_conv,
+                        step_runtime=step_runtime,
+                        best_run=0,
                     )
 
+                    logger.warning("⚠️ Convergence is not sufficient. Retry with some random noise on best result. 🔀")
                     if working_value < best_value:
                         best_value = working_value
                         best_tensors = working_tensors
