@@ -186,6 +186,12 @@ class VariPEPS_Config:
       optimizer_precond_gmres_maxiter (:obj:`int`):
         Maximal number of outer iterations inside the GMRES method for the
         inversion of the preconditioner.
+      optimizer_min_steps_before_random_noise (:obj:`int`):
+        Minimal number of optimization steps before random noise retries are
+        started.
+      optimizer_convergence_energy_eps (:obj:`float`):
+        Convergence criterion for the optimization routine based on energy
+        difference between two steps.
       line_search_method (:obj:`Line_Search_Methods`):
         Method used for the line search routine.
       line_search_initial_step_size (:obj:`float`):
@@ -245,6 +251,22 @@ class VariPEPS_Config:
         Type of wavevector to be used (only positive/symmetric interval/...).
       slurm_restart_mode (:obj:`Slurm_Restart_Mode`):
         Mode of operation to restart slurm job if maximal runtime is reached.
+      log_level_global (:obj:`LogLevel`):
+        Global logging level.
+      log_level_optimizer (:obj:`LogLevel`):
+        Logging level for optimizer module.
+      log_level_ctmrg (:obj:`LogLevel`):
+        Logging level for CTMRG module.
+      log_level_line_search (:obj:`LogLevel`):
+        Logging level for line search module.
+      log_level_expectation (:obj:`LogLevel`):
+        Logging level for expectation value calculations.
+      log_to_console (:obj:`bool`):
+        Enable logging to console.
+      log_to_file (:obj:`bool`):
+        Enable logging to file.
+      log_file (:obj:`str`):
+        Filename for logging to file.
     """
 
     # AD config
@@ -300,6 +322,7 @@ class VariPEPS_Config:
     optimizer_precond_gmres_krylov_subspace_size: int = 30
     optimizer_precond_gmres_maxiter: int = 3
     optimizer_min_steps_before_random_noise: int = 10
+    optimizer_convergence_energy_eps: float = 1e-6
 
     # Line search
     line_search_method: Line_Search_Methods = Line_Search_Methods.HAGERZHANG
