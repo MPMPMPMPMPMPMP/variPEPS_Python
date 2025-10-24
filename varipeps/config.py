@@ -287,6 +287,7 @@ class VariPEPS_Config:
     optimizer_random_noise_max_retries: int = 5
     optimizer_random_noise_relative_amplitude: float = 1e-1
     optimizer_reuse_env_eps: float = 1e-3
+    optimizer_min_steps_before_random_noise: int = 10
 
     # Line search
     line_search_method: Line_Search_Methods = Line_Search_Methods.HAGERZHANG
