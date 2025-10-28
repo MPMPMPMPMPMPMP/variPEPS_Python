@@ -736,6 +736,9 @@ def optimize_peps_network(
                     isinstance(input_tensors, collections.abc.Sequence)
                     and isinstance(input_tensors[0], PEPS_Unit_Cell)
                 ):
+                    if best_tensors is None or best_unitcell is None:
+                        best_tensors = working_tensors
+                        best_unitcell = working_unitcell
                     working_tensors = (
                         cast(
                             List[jnp.ndarray],
