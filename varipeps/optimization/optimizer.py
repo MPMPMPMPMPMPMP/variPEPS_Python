@@ -679,7 +679,21 @@ def optimize_peps_network(
     slurm_restart_written = False
     slurm_new_job_id = None
 
+    # Freeze-chi setup: remember original flags and the number of freeze steps
+    orig_heuristic_increase_chi = varipeps_config.ctmrg_heuristic_increase_chi
+    orig_heuristic_decrease_chi = varipeps_config.ctmrg_heuristic_decrease_chi
+    freeze_chi_steps = int(varipeps_config.optimizer_freeze_chi_for_initial_steps)
+
     while count < varipeps_config.optimizer_max_steps:
+        # Freeze both increase/decrease heuristics for the requested number of initial steps
+        if freeze_chi_steps > 0:
+            if count < freeze_chi_steps:
+                varipeps_config.ctmrg_heuristic_increase_chi = False
+                varipeps_config.ctmrg_heuristic_decrease_chi = False
+            else:
+                varipeps_config.ctmrg_heuristic_increase_chi = orig_heuristic_increase_chi
+                varipeps_config.ctmrg_heuristic_decrease_chi = orig_heuristic_decrease_chi
+
         runtime_start = time.perf_counter()
 
         chi_before_ctmrg = working_unitcell[0, 0][0][0].chi
@@ -891,6 +905,9 @@ def optimize_peps_network(
                         logger.warning(
                             f"️⛔ Only {count:d} steps done, which is less than the minimum required {varipeps_config.optimizer_min_steps_before_random_noise:d} steps. This state doesn't seem to converge.️ ⛔"
                         )
+                        # Restore original heuristic flags before early return
+                        varipeps_config.ctmrg_heuristic_increase_chi = orig_heuristic_increase_chi
+                        varipeps_config.ctmrg_heuristic_decrease_chi = orig_heuristic_decrease_chi
                         return OptimizeResult(
                         success=False,
                         message=str(type(e)),

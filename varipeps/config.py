@@ -192,6 +192,9 @@ class VariPEPS_Config:
       optimizer_convergence_energy_eps (:obj:`float`):
         Convergence criterion for the optimization routine based on energy
         difference between two steps.
+      optimizer_freeze_chi_for_initial_steps (:obj:`int`):
+        For the first N optimization steps, disable both CTMRG chi heuristics
+        (increase and decrease). After N steps, restore the original settings.
       line_search_method (:obj:`Line_Search_Methods`):
         Method used for the line search routine.
       line_search_initial_step_size (:obj:`float`):
@@ -323,6 +326,7 @@ class VariPEPS_Config:
     optimizer_precond_gmres_maxiter: int = 3
     optimizer_min_steps_before_random_noise: int = 10
     optimizer_convergence_energy_eps: float = 1e-6
+    optimizer_freeze_chi_for_initial_steps: int = 0
 
     # Line search
     line_search_method: Line_Search_Methods = Line_Search_Methods.HAGERZHANG
