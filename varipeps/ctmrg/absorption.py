@@ -98,9 +98,14 @@ def _get_ctmrg_1x2_structure(
 def _post_process_CTM_tensors(a: jnp.ndarray, config: VariPEPS_Config) -> jnp.ndarray:
 
     a = a / jnp.linalg.norm(a)
-    idx = jnp.argmax(jnp.abs(a))
-    max_val = a.flatten()[idx]
-    phase = max_val / jnp.abs(max_val)
+    aflat = a.flatten()
+    a_abs = jnp.abs(aflat)
+    idx = jnp.argmax(a_abs >= VariPEPS_Config.svd_sign_fix_eps * jnp.max(a_abs))
+    phase = aflat[idx] / a_abs[idx]
+    # aflat = a.flatten()
+    # idx = jnp.argmax(jnp.abs(aflat))
+    # max_val = aflat[idx]
+    # phase = max_val / jnp.abs(max_val)
 
     return a * phase.conj()
 
