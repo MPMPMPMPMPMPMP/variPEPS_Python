@@ -278,6 +278,7 @@ class VariPEPS_Config:
     ad_custom_verbose_output: bool = False
     ad_custom_convergence_eps: float = 1e-7
     ad_custom_max_steps: int = 75
+    ad_custom_convergence_check_nondecreasing: bool = False
     checkpointing_ncon: bool = False
     checkpointing_projectors: bool = False
 

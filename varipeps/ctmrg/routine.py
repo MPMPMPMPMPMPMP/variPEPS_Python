@@ -922,6 +922,7 @@ def _ctmrg_rev_while_body(carry):
         count,
         config,
         state,
+        (_, prv_measure)
     ) = carry
 
     new_env_bar = vjp_env((bar_fixed_point_last_step, jnp.array(0, dtype=jnp.float64)))[
@@ -952,6 +953,8 @@ def _ctmrg_rev_while_body(carry):
             config.ad_custom_convergence_eps,
             split_transfer=bar_fixed_point.is_split_transfer(),
         )
+        if varipeps_config.ad_custom_convergence_check_nondecreasing:
+            converged = jnp.logical_or(measure >= prv_measure, converged)
 
     count += 1
 
@@ -960,7 +963,7 @@ def _ctmrg_rev_while_body(carry):
         if config.ad_custom_verbose_output:
             jax.debug.callback(print_verbose, verbose_data, ordered=True, ad=True)
 
-    return vjp_env, initial_bar, bar_fixed_point, converged, count, config, state
+    return vjp_env, initial_bar, bar_fixed_point, converged, count, config, state, (prv_measure, measure)
 
 
 @jit
@@ -1004,19 +1007,18 @@ def _ctmrg_rev_workhorse(peps_tensors, new_unitcell, new_unitcell_bar, config, s
         )
 
     def cond_func(carry):
-        _, _, _, converged, count, config, state = carry
-
+        _, _, _, converged, count, config, state, (prv_measure, measure) = carry
         return jnp.logical_not(converged) & (count < config.ad_custom_max_steps)
 
-    _, _, env_fixed_point, converged, end_count, _, _ = while_loop(
+    _, _, env_fixed_point, converged, end_count, _, _, (prv_measure, measure) = while_loop(
         cond_func,
         _ctmrg_rev_while_body,
-        (vjp_env, new_unitcell_bar, new_unitcell_bar, False, 0, config, state),
+        (vjp_env, new_unitcell_bar, new_unitcell_bar, False, 0, config, state, (jnp.inf, jnp.inf)),
     )
 
     (t_bar,) = vjp_peps_tensors((env_fixed_point, jnp.array(0, dtype=jnp.float64)))
 
-    return t_bar, converged, end_count
+    return t_bar, converged, end_count, measure
 
 
 def calc_ctmrg_env_rev(
@@ -1036,7 +1038,7 @@ def calc_ctmrg_env_rev(
 
     if logger.isEnabledFor(logging.WARNING):
         t0 = time.perf_counter()
-    t_bar, converged, end_count = _ctmrg_rev_workhorse(
+    t_bar, converged, end_count, measure = _ctmrg_rev_workhorse(
         peps_tensors, new_unitcell, unitcell_bar, varipeps_config, varipeps_global_state
     )
 
