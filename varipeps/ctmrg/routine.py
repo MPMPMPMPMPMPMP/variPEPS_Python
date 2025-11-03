@@ -1044,13 +1044,12 @@ def calc_ctmrg_env_rev(
 
     if not converged and logger.isEnabledFor(logging.WARNING):
         logger.warning(
-            "Custom VJP: ❌ did not converge, took %.2f seconds. (Steps: %d)",
-            time.perf_counter() - t0, end_count
+            "Custom VJP: ❌ did not converge %.2e, took %.2f seconds. (Steps: %d)",
+            measure, time.perf_counter() - t0, end_count
         )
     elif logger.isEnabledFor(logging.INFO):
         logger.info(
-            "Custom VJP: ✅ converged, took %.2f seconds. (Steps: %d, %.2f sec/step)",
-            time.perf_counter() - t0, end_count, (time.perf_counter() - t0) / end_count
+            "Custom VJP: ✅ converged %.2e, took %.2f seconds. (Steps: %d, %.2f sec/step)", measure, time.perf_counter() - t0, end_count, (time.perf_counter() - t0) / end_count
         )
     if end_count == varipeps_config.ad_custom_max_steps and not converged:
         raise CTMRGGradientNotConvergedError
