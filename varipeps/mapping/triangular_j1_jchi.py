@@ -6,7 +6,6 @@ from os import PathLike
 import jax.numpy as jnp
 import numpy as np
 from jax import jit
-import jax.util
 import h5py
 import jax
 import logging
