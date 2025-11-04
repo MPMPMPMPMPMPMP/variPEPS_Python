@@ -119,26 +119,13 @@ def _truncated_SVD(
     Vh = Vh[:chi, :]
 
     if len_S > chi:
-
-        def fix_multiplets(carry, x):
-            S_elem, gap = x
-            (already_found,) = carry
-
-            trunc_cond = gap > truncation_eps
-            already_found = jnp.logical_or(trunc_cond, already_found)
-
-            result = cond(
-                already_found, lambda x: x, lambda x: jnp.zeros_like(x), S_elem
-            )
-
-            return (already_found,), result
-
-        _, S = scan(
-            fix_multiplets,
-            (jnp.zeros((), dtype=bool),),
-            (S, gaps),
-            reverse=True,
-        )
+        # jax.debug.print("S before fixing multiplets: {}", S)
+        # Vectorized replacement for reverse scan preserving multiplets:
+        # keep S[i] if any gap[j] > truncation_eps for j >= i
+        gap_cond = gaps > truncation_eps
+        mask = (jnp.cumsum(gap_cond[::-1], dtype=jnp.int32)[::-1] > 0)
+        S = S * mask.astype(S.dtype)
+        # jax.debug.print("S after fixing multiplets: {}", S)
 
     relevant_S_values = (S / S[0]) > truncation_eps
     S_inv_sqrt = jnp.where(
