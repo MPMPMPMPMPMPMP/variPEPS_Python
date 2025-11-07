@@ -1059,15 +1059,13 @@ def optimize_peps_network(
 
         count += 1
 
-        step_str = f"{float(linesearch_step):0.3f}" if linesearch_step is not None else "None"
         logger.info(
-            "📉 %4d | E=%.8f ΔE=%.2e | r=%d | ‖∇ψ‖=%.2e | ls=%s | ε_tr=%.1e | χ=%d | t=%.0fs",
+            "📉 %4d | E=%.8f ΔE=%+.2e | r=%d | ‖∇ψ‖=%.2e | ε_tr=%.1e | χ=%d | t=%.0fs",
             int(count),
             float(working_value),
             float(step_energies[random_noise_retries][-2] - working_value) if len(step_energies[random_noise_retries]) > 1 else 0.0,
             int(random_noise_retries),
             float(conv),
-            step_str,
             float(max_trunc_error),
             int(step_chi[random_noise_retries][-1]),
             float(runtime),
