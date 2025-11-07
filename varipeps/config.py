@@ -270,6 +270,8 @@ class VariPEPS_Config:
         Enable logging to file.
       log_file (:obj:`str`):
         Filename for logging to file.
+      log_tqdm (:obj:`bool`):
+        Enable tqdm-based console logging.
     """
 
     # AD config
@@ -372,6 +374,7 @@ class VariPEPS_Config:
     log_to_file: bool = False
     log_file: str = "varipeps.log"
     log_step_summary_every_n: int = 1
+    log_tqdm: bool = False              #: Enable tqdm-based console logging
 
     def update(self, name: str, value: Any) -> NoReturn:
         self.__setattr__(name, value)
