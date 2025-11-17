@@ -331,7 +331,6 @@ class VariPEPS_Config:
     optimizer_precond_gmres_krylov_subspace_size: int = 30
     optimizer_precond_gmres_maxiter: int = 3
     optimizer_min_steps_before_random_noise: int = 10
-    optimizer_convergence_energy_eps: float = 1e-6
     optimizer_freeze_chi_for_initial_steps: int = 0
 
     # Line search
