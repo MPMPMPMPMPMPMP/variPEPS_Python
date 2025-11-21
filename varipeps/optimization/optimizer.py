@@ -841,9 +841,72 @@ def optimize_peps_network(
 
             if count == 0 or signal_reset_descent_dir:
                 descent_dir = [-elem for elem in working_gradient]
+
+                if varipeps_config.optimizer_use_preconditioning:
+                    if (
+                        hasattr(
+                            working_unitcell.get_unique_tensors()[0],
+                            "is_triangular_peps",
+                        )
+                        and working_unitcell.get_unique_tensors()[
+                            0
+                        ].is_triangular_peps
+                    ):
+                        contraction = "precondition_operator_triangular"
+                    elif (
+                        hasattr(
+                            working_unitcell.get_unique_tensors()[0],
+                            "is_split_transfer",
+                        )
+                        and working_unitcell.get_unique_tensors()[
+                            0
+                        ].is_split_transfer
+                    ):
+                        contraction = "precondition_operator_split_transfer"
+                    else:
+                        contraction = "precondition_operator"
+
+                    grad_norm_squared = 1e-2 * (
+                        jnp.linalg.norm(jnp.asarray(working_gradient)) ** 2
+                    )
+
+                    tmp_descent_dir = [
+                        jax.scipy.sparse.linalg.gmres(
+                            lambda x: (
+                                apply_contraction_jitted(
+                                    contraction, (te.tensor,), (te,), (x,)
+                                )
+                                + grad_norm_squared * x
+                            ),
+                            xe,
+                            xe,
+                            restart=varipeps_config.optimizer_precond_gmres_krylov_subspace_size,
+                            maxiter=varipeps_config.optimizer_precond_gmres_maxiter,
+                            solve_method="incremental",
+                        )[0]
+                        for te, xe in zip(
+                            working_unitcell.get_unique_tensors(),
+                            descent_dir,
+                            strict=True,
+                        )
+                    ]
+                    if all(
+                        jnp.sum(xe * x2e.conj()) >= 0
+                        for xe, x2e in zip(
+                            descent_dir, tmp_descent_dir, strict=True
+                        )
+                    ):
+                        descent_dir = tmp_descent_dir
+                    else:
+                        logger.info("Warning: Non-positive preconditioner")
+                    del contraction
+                    del grad_norm_squared
             else:
                 descent_dir = _l_bfgs_workhorse(
-                    tuple(l_bfgs_x_cache), tuple(l_bfgs_grad_cache)
+                    tuple(l_bfgs_x_cache),
+                    tuple(l_bfgs_grad_cache),
+                    working_unitcell.get_unique_tensors(),
+                    varipeps_config,
                 )
         else:
             raise ValueError("Unknown optimization method.")
