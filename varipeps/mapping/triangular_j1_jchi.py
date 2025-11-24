@@ -230,41 +230,76 @@ class Triangular_j1_jchi_model(Expectation_Model):
             working_up_gates = self.up_gates
             working_down_gates = self.down_gates
 
+        # Vectorized implementation assuming all tensors have the same shape
+        # NOTE: The loop over unitcell rows happens only during JIT compilation (tracing).
+        # Once compiled, the indices are baked into the graph as constants.
+        # Recompilation only happens if the unitcell structure (size/topology) changes.
+        
+        # 1. Stack tensors
+        # peps_tensors is a sequence of arrays (one for each unique tensor)
+        # We stack them into a single array (N_unique, d, D, D, D, D)
+        flat_tensors = jnp.stack(peps_tensors)
+
+        # 2. Stack tensor objects (metadata/CTM envs)
+        unique_tensor_objs = unitcell.get_unique_tensors()
+        # Stack into a single PEPS_Tensor where each leaf is stacked
+        flat_objs = jax.tree_util.tree_map(lambda *args: jnp.stack(args), *unique_tensor_objs)
+
+        # 3. Collect indices for all plaquettes
+        indices_list = []
         for x, iter_rows in unitcell.iter_all_rows(only_unique=only_unique):
             for y, view in iter_rows:
-                # Get all 4 tensors in the 2x2 view
-                tensors_i = view.get_indices(
-                    (slice(0, 2, None), slice(0, 2, None))
-                )
-                tensors = [
-                    peps_tensors[i] for j in tensors_i for i in j
-                ]
-                tensor_objs = [t for tl in view[:2, :2] for t in tl]
+                # Get indices for the 2x2 block
+                inds = view.get_indices((slice(0, 2), slice(0, 2)))
+                # Flatten: [TL, TR, BL, BR]
+                flat_inds = [inds[0][0], inds[0][1], inds[1][0], inds[1][1]]
+                indices_list.append(flat_inds)
+        
+        indices = jnp.array(indices_list, dtype=jnp.int32)
 
-                # print(tensor_objs)
-                # print(tensors)
+        # 4. Define scan body
+        def scan_body(carry, idxs):
+            # idxs: (4,)
+            
+            # Gather tensors: (4, ...)
+            current_ts_array = flat_tensors[idxs]
+            # Convert to list of 4 tensors
+            current_ts_list = [current_ts_array[i] for i in range(4)]
+            
+            # Gather objects
+            # Slice the stacked PEPS_Tensor -> one PEPS_Tensor with dim 4
+            objs_stacked = jax.tree_util.tree_map(lambda x: x[idxs], flat_objs)
+            # Unpack into list of 4 PEPS_Tensors
+            current_objs_list = [
+                jax.tree_util.tree_map(lambda x: x[i], objs_stacked) 
+                for i in range(4)
+            ]
+            
+            # Calculate expectations
+            step_result_down = jax.checkpoint(calc_three_sites_triangle_without_bottom_left_multiple_gates)(
+                current_ts_list,
+                current_objs_list,
+                working_down_gates,
+            )
+            
+            step_result_up = jax.checkpoint(calc_three_sites_triangle_without_top_right_multiple_gates)(
+                current_ts_list,
+                current_objs_list,
+                working_up_gates,
+            )
+            
+            # Accumulate results
+            new_carry = []
+            for c, sr_down, sr_up in zip(carry, step_result_down, step_result_up):
+                val = (sr_down.real if self._result_type == jnp.float64 else sr_down) + \
+                      (sr_up.real if self._result_type == jnp.float64 else sr_up)
+                new_carry.append(c + val)
+            
+            return new_carry, None
 
-                #The gate is applied in the order [top-left, top-right, bottom-right].
-                step_result_down = (
-                    jax.checkpoint(calc_three_sites_triangle_without_bottom_left_multiple_gates)(
-                        tensors,
-                        tensor_objs,
-                        working_down_gates,
-                    )
-                )
-                #The gate is applied in the order [top-left, bottom-left, bottom-right].
-                step_result_up = (
-                    jax.checkpoint(calc_three_sites_triangle_without_top_right_multiple_gates)(
-                        tensors,
-                        tensor_objs,
-                        working_up_gates,
-                    )
-                )
-
-                for sr_i, (sr_down, sr_up) in enumerate(
-                    zip(step_result_down, step_result_up, strict=True)
-                ):
-                    result[sr_i] += (sr_down.real if self._result_type == jnp.float64 else sr_down) + (sr_up.real if self._result_type == jnp.float64 else sr_up)
+        # 5. Run scan
+        final_result, _ = jax.lax.scan(scan_body, result, indices)
+        result = final_result
 
         if normalize_by_size:
             size = unitcell.get_len_unique_tensors() if only_unique else (unitcell.get_size()[0] * unitcell.get_size()[1])
