@@ -446,6 +446,7 @@ def _ctmrg_body_func(carry):
         count,
         elementwise_conv,
         norm_smallest_S,
+        last_measure,
         state,
         config,
     ) = carry
@@ -520,6 +521,11 @@ def _ctmrg_body_func(carry):
         eps,
         config,
     )
+    if varipeps_config.ctmrg_stop_if_nondecreasing:
+        converged = converged | (
+            (measure < 1000 * eps) & (last_measure < measure)
+        )
+
     if logger.isEnabledFor(logging.DEBUG):
         jax.debug.callback(lambda cnt, msr: logger.debug(f"CTMRG: Step {cnt}: {msr}"), count, measure, ordered=True)
         if config.ctmrg_verbose_output:
@@ -536,6 +542,7 @@ def _ctmrg_body_func(carry):
         count,
         elementwise_conv,
         norm_smallest_S,
+        measure,
         state,
         config,
     )
@@ -544,7 +551,7 @@ def _ctmrg_body_func(carry):
 @jit
 def _ctmrg_while_wrapper(start_carry):
     def cond_func(carry):
-        _, _, converged, _, _, count, _, _, _, config = carry
+        _, _, converged, _, _, count, _, _, _, _, config = carry
         return jnp.logical_not(converged) & (count < config.ctmrg_max_steps)
 
     (
@@ -556,6 +563,7 @@ def _ctmrg_while_wrapper(start_carry):
         end_count,
         _,
         norm_smallest_S,
+        _,
         _,
         _,
     ) = while_loop(cond_func, _ctmrg_body_func, start_carry)
@@ -685,6 +693,7 @@ def calc_ctmrg_env(
                 norm_smallest_S,
                 _,
                 _,
+                _,
             ) = _ctmrg_body_func(
                 (
                     peps_tensors,
@@ -694,6 +703,7 @@ def calc_ctmrg_env(
                     eps,
                     tmp_count,
                     enforce_elementwise_convergence,
+                    jnp.inf,
                     jnp.inf,
                     varipeps_global_state,
                     varipeps_config,
@@ -715,6 +725,7 @@ def calc_ctmrg_env(
                         eps,
                         tmp_count,
                         enforce_elementwise_convergence,
+                        jnp.inf,
                         jnp.inf,
                         varipeps_global_state,
                         varipeps_config,

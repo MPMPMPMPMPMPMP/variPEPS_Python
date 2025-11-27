@@ -304,6 +304,7 @@ class VariPEPS_Config:
     ctmrg_heuristic_increase_chi_step_size: int = 2
     ctmrg_heuristic_decrease_chi: bool = True
     ctmrg_heuristic_decrease_chi_step_size: int = 1
+    ctmrg_stop_if_nondecreasing: bool = False
 
     # Triangular CTMRG routine
     triangular_ctmrg_use_split: bool = False
